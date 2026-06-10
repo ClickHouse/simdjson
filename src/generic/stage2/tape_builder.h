@@ -180,6 +180,9 @@ simdjson_warn_unused simdjson_inline error_code tape_builder::visit_number(json_
     const uint8_t *p = value;
     if (*p == '-') ++p;
     while (*p >= '0' && *p <= '9') ++p;
+    // The character after the digit run must be structural or whitespace,
+    // otherwise the number token is malformed (e.g. "123456789123456789123x").
+    if (jsoncharutils::is_not_structural_or_whitespace(*p)) { return NUMBER_ERROR; }
     size_t len = size_t(p - value);
 
     uint8_t *dst = on_start_string(iter);
