@@ -172,7 +172,23 @@ simdjson_warn_unused simdjson_inline error_code tape_builder::visit_root_string(
 
 simdjson_warn_unused simdjson_inline error_code tape_builder::visit_number(json_iterator &iter, const uint8_t *value) noexcept {
   iter.log_value("number");
-  return numberparsing::parse_number(value, tape);
+  error_code err = numberparsing::parse_number(value, tape);
+  if (err == BIGINT_ERROR) {
+    // Big integer does not fit in int64/uint64.
+    // Write it as a string on the tape so the consumer can parse it
+    // into a wider integer type (e.g. Int128, UInt256).
+    const uint8_t *p = value;
+    if (*p == '-') ++p;
+    while (*p >= '0' && *p <= '9') ++p;
+    size_t len = size_t(p - value);
+
+    uint8_t *dst = on_start_string(iter);
+    std::memcpy(dst, value, len);
+    dst += len;
+    on_end_string(dst);
+    return SUCCESS;
+  }
+  return err;
 }
 
 simdjson_warn_unused simdjson_inline error_code tape_builder::visit_root_number(json_iterator &iter, const uint8_t *value) noexcept {
