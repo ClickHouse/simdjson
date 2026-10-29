@@ -25,7 +25,11 @@
 #else
   #define SIMDJSON_KEY_SELECTOR_HAS_NEON 0
 #endif
-#if defined(__SSE2__)
+// Real x86 only: some non-x86 toolchains predefine __SSE2__ to enable their
+// x86-intrinsic emulation (PowerPC with -maltivec does), but the emulation
+// spells __m128i differently from _mm_loadu_si128's __m128i_u, so the loads
+// below do not compile there. Such targets use the scalar path instead.
+#if defined(__SSE2__) && (defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86))
   #include <emmintrin.h>
   #define SIMDJSON_KEY_SELECTOR_HAS_SSE2 1
 #else
